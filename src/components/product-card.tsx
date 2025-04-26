@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { useRouter } from 'next/router';
 import { formatCurrency } from '@/lib/utils';
-import Image from 'next/image';
 
 interface ProductCardProps {
   product: {
@@ -40,45 +39,44 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="group bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col h-full">
-      {/* Fixed height image container */}
-      <div className="relative w-full h-48 overflow-hidden">
+    <div className="group bg-white rounded-md shadow-sm hover:shadow transition-shadow duration-200 flex flex-col max-w-xs mx-auto">
+      {/* Smaller fixed height image container */}
+      <div className="relative w-full h-32 overflow-hidden rounded-t-md">
         <img
           src={imageError ? getCategoryPlaceholder(product.category) : product.imageUrl}
           alt={product.name}
-          className="w-full h-full object-cover object-center transition-transform duration-500 ease-in-out"
+          className="w-full h-full object-cover object-center"
           onError={handleImageError}
-          style={{ aspectRatio: '16/9' }}
         />
-        <div className="absolute top-2 right-2">
-          <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 border border-green-200 shadow-sm">
+        <div className="absolute top-1 right-1">
+          <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 border border-green-200">
             {product.category}
           </span>
         </div>
       </div>
       
-      {/* Content area with fixed padding and consistent heights */}
-      <div className="p-4 flex flex-col flex-grow">
-        <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1 group-hover:text-green-600 transition-colors">
+      {/* Smaller content area */}
+      <div className="p-3 flex flex-col">
+        <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">
           {product.name}
         </h3>
         
-        <p className="text-sm text-gray-600 flex-grow line-clamp-2 mb-3">
+        <p className="text-xs text-gray-600 line-clamp-2 mt-1 mb-2 h-8">
           {product.description}
         </p>
         
-        <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-auto">
-          <span className="text-lg font-bold text-gray-900">
+        <div className="flex justify-between items-center pt-2 border-t border-gray-100 mt-auto">
+          <span className="text-sm font-bold text-gray-900">
             {formatCurrency(product.price)} 
-            <span className="text-xs text-gray-600 ml-1">per kg</span>
+            <span className="text-xs text-gray-500 ml-1">per kg</span>
           </span>
           
           <button
             onClick={handleOrderClick}
-            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md shadow text-sm transition-colors duration-200 flex items-center gap-1"
+            className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs transition-colors duration-200 flex items-center gap-1"
             aria-label={`Order ${product.name}`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
               <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3z" />
             </svg>
             Order
