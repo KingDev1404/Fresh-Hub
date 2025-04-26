@@ -1,4 +1,4 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { hash } from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 
@@ -10,14 +10,13 @@ export default async function handler(
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
+  const { name, email, password } = req.body;
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
+
   try {
-    const { name, email, password } = req.body;
-
-    // Check if required fields are provided
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: {
@@ -29,7 +28,7 @@ export default async function handler(
       return res.status(409).json({ message: 'User already exists' });
     }
 
-    // Hash password
+    // Hash the password
     const hashedPassword = await hash(password, 10);
 
     // Create new user
@@ -38,15 +37,14 @@ export default async function handler(
         name,
         email,
         password: hashedPassword,
+        role: 'BUYER', // Default role for new users
       },
     });
 
-    // Return the user without password
-    return res.status(201).json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-    });
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+
+    return res.status(201).json(userWithoutPassword);
   } catch (error) {
     console.error('Registration error:', error);
     return res.status(500).json({ message: 'Internal server error' });

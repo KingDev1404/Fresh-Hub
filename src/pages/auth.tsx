@@ -1,8 +1,7 @@
 import * as React from 'react';
-import { useState } from 'react';
+import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { signIn, useSession } from 'next-auth/react';
-import Head from 'next/head';
 
 type FormData = {
   name?: string;
@@ -11,219 +10,218 @@ type FormData = {
 };
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState<FormData>({
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [isLogin, setIsLogin] = React.useState(true);
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [formData, setFormData] = React.useState<FormData>({
     name: '',
     email: '',
     password: '',
   });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const { data: session } = useSession();
 
   // Redirect to home if already logged in
   React.useEffect(() => {
-    if (session) {
+    if (status === 'authenticated') {
       router.push('/');
     }
-  }, [session, router]);
+  }, [status, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     setError('');
 
-    try {
-      if (isLogin) {
-        // Login
-        const result = await signIn('credentials', {
+    if (isLogin) {
+      // Login
+      const result = await signIn('credentials', {
+        redirect: false,
+        email: data.email,
+        password: data.password,
+      });
+
+      if (result?.error) {
+        setError('Invalid email or password');
+        setLoading(false);
+        return;
+      }
+
+      // Redirect on successful login
+      router.push('/');
+    } else {
+      // Register
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            password: data.password,
+          }),
+        });
+
+        if (!res.ok) {
+          const { message } = await res.json();
+          throw new Error(message || 'Registration failed');
+        }
+
+        // Auto login after registration
+        await signIn('credentials', {
           redirect: false,
           email: data.email,
           password: data.password,
         });
 
-        if (result?.error) {
-          setError('Invalid email or password');
-        } else {
-          router.push('/');
-        }
-      } else {
-        // Register
-        const response = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-
-        if (response.ok) {
-          // Auto login after successful registration
-          await signIn('credentials', {
-            redirect: false,
-            email: data.email,
-            password: data.password,
-          });
-          router.push('/');
-        } else {
-          const errorData = await response.json();
-          setError(errorData.message || 'Registration failed');
-        }
+        // Redirect on successful registration + login
+        router.push('/');
+      } catch (err: any) {
+        setError(err.message || 'Registration failed');
+        setLoading(false);
       }
-    } catch (err) {
-      console.error(err);
-      setError('An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate form
+
+    // Validation
     if (!formData.email || !formData.password) {
       setError('Please fill in all required fields');
       return;
     }
-    
+
     if (!isLogin && !formData.name) {
       setError('Please provide your name');
       return;
     }
-    
+
     onSubmit(formData);
   };
 
   return (
     <>
       <Head>
-        <title>{isLogin ? 'Sign In' : 'Create Account'} | FreshHarvest</title>
+        <title>{isLogin ? 'Sign In' : 'Sign Up'} | FreshHarvest</title>
       </Head>
 
-      <div className="flex min-h-[80vh]">
-        {/* Form Column */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center p-8">
-          <div className="max-w-md mx-auto w-full">
-            <h1 className="text-3xl font-bold mb-6">
-              {isLogin ? 'Welcome Back' : 'Create Your Account'}
-            </h1>
-            
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Welcome to FreshHarvest
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            {isLogin ? 'Sign in to your account' : 'Create a new account'}
+          </p>
+        </div>
+
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
             {error && (
               <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4">
                 {error}
               </div>
             )}
-            
-            <form onSubmit={handleSubmit}>
+
+            <form className="space-y-6" onSubmit={handleSubmit}>
               {!isLogin && (
-                <div className="mb-4">
-                  <label htmlFor="name" className="block text-sm font-medium mb-1">
-                    Full Name
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                    Full Name <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="w-full p-2 border rounded-md"
-                    placeholder="Enter your full name"
-                  />
+                  <div className="mt-1">
+                    <input
+                      id="name"
+                      name="name"
+                      type="text"
+                      autoComplete="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                      required={!isLogin}
+                    />
+                  </div>
                 </div>
               )}
-              
-              <div className="mb-4">
-                <label htmlFor="email" className="block text-sm font-medium mb-1">
-                  Email Address
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email Address <span className="text-red-500">*</span>
                 </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full p-2 border rounded-md"
-                  placeholder="Enter your email"
-                  required
-                />
+                <div className="mt-1">
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                    required
+                  />
+                </div>
               </div>
-              
-              <div className="mb-6">
-                <label htmlFor="password" className="block text-sm font-medium mb-1">
-                  Password
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password <span className="text-red-500">*</span>
                 </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full p-2 border rounded-md"
-                  placeholder="Enter your password"
-                  required
-                />
+                <div className="mt-1">
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                    required
+                  />
+                </div>
               </div>
-              
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-green-600 text-white py-2 px-4 rounded-md font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
-              >
-                {loading
-                  ? 'Processing...'
-                  : isLogin
-                  ? 'Sign In'
-                  : 'Create Account'}
-              </button>
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                >
+                  {loading
+                    ? 'Processing...'
+                    : isLogin
+                    ? 'Sign In'
+                    : 'Create Account'}
+                </button>
+              </div>
             </form>
-            
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-green-600 hover:text-green-800 text-sm font-medium"
-              >
-                {isLogin
-                  ? "Don't have an account? Sign up"
-                  : 'Already have an account? Sign in'}
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        {/* Hero Column */}
-        <div className="hidden md:block md:w-1/2 bg-green-50">
-          <div className="flex flex-col justify-center items-center h-full p-8">
-            <h2 className="text-2xl font-bold text-green-800 mb-4">Fresh Farm Produce</h2>
-            <p className="text-center text-gray-600 max-w-md mb-6">
-              Order fresh vegetables and fruits in bulk directly from our farms.
-              Enjoy quality products at wholesale prices delivered right to your door.
-            </p>
-            <div className="bg-white p-4 rounded-lg shadow-md">
-              <ul className="space-y-2">
-                <li className="flex items-center">
-                  <span className="mr-2 text-green-500">✓</span>
-                  <span>Wide selection of fresh produce</span>
-                </li>
-                <li className="flex items-center">
-                  <span className="mr-2 text-green-500">✓</span>
-                  <span>Bulk ordering for better prices</span>
-                </li>
-                <li className="flex items-center">
-                  <span className="mr-2 text-green-500">✓</span>
-                  <span>Convenient delivery options</span>
-                </li>
-                <li className="flex items-center">
-                  <span className="mr-2 text-green-500">✓</span>
-                  <span>Farm to table freshness</span>
-                </li>
-              </ul>
+
+            <div className="mt-6">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">
+                    {isLogin ? "Don't have an account?" : 'Already have an account?'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-6 text-center">
+                <button
+                  type="button"
+                  onClick={() => setIsLogin(!isLogin)}
+                  className="font-medium text-green-600 hover:text-green-500"
+                >
+                  {isLogin ? 'Create a new account' : 'Sign in to your account'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

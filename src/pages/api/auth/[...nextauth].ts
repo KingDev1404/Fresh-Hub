@@ -9,8 +9,8 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'text' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -23,18 +23,12 @@ export const authOptions: NextAuthOptions = {
           },
         });
 
-        if (!user) {
-          return null;
-        }
-
-        const isPasswordValid = await compare(credentials.password, user.password);
-
-        if (!isPasswordValid) {
+        if (!user || !(await compare(credentials.password, user.password))) {
           return null;
         }
 
         return {
-          id: String(user.id),
+          id: user.id.toString(),
           email: user.email,
           name: user.name,
           role: user.role,
@@ -43,14 +37,14 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    jwt: async ({ token, user }) => {
+    jwt: ({ token, user }) => {
       if (user) {
         token.id = user.id;
         token.role = user.role;
       }
       return token;
     },
-    session: async ({ session, token }) => {
+    session: ({ session, token }) => {
       if (token) {
         session.user.id = token.id;
         session.user.role = token.role;
@@ -64,7 +58,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET || 'your-super-secret-key',
+  secret: process.env.NEXTAUTH_SECRET || 'your-secret-key',
 };
 
 const authHandler: NextApiHandler = (req, res) => NextAuth(req, res, authOptions);
