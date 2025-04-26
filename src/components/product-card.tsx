@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/router';
 import { formatCurrency } from '@/lib/utils';
+import { useCart } from '@/contexts/CartContext';
 
 interface ProductCardProps {
   product: {
@@ -15,11 +16,26 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
+  const { addItem } = useCart();
   const [imageError, setImageError] = React.useState(false);
   const [isHovered, setIsHovered] = React.useState(false);
+  const [isAddingToCart, setIsAddingToCart] = React.useState(false);
   
   const handleOrderClick = () => {
     router.push(`/orders/new?productId=${product.id}`);
+  };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsAddingToCart(true);
+    
+    // Add item to cart
+    addItem(product, 1);
+    
+    // Visual feedback
+    setTimeout(() => {
+      setIsAddingToCart(false);
+    }, 500);
   };
 
   // Handle image loading error
@@ -65,12 +81,23 @@ export function ProductCard({ product }: ProductCardProps) {
         {isHovered && (
           <div className="position-absolute top-0 left-0 w-100 h-100 d-flex align-items-center justify-content-center animate-fade-in" 
                style={{ background: 'rgba(0,0,0,0.3)' }}>
-            <button 
-              className="btn btn-sm btn-success animate-pulse"
-              onClick={handleOrderClick}
-            >
-              Quick Order
-            </button>
+            <div className="d-flex gap-2">
+              <button 
+                className="btn btn-sm btn-success animate-pulse"
+                onClick={handleOrderClick}
+              >
+                Order Now
+              </button>
+              <button 
+                className="btn btn-sm btn-warning animate-pulse"
+                onClick={handleAddToCart}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-cart-plus" viewBox="0 0 16 16">
+                  <path d="M9 5.5a.5.5 0 0 0-1 0V7H6.5a.5.5 0 0 0 0 1H8v1.5a.5.5 0 0 0 1 0V8h1.5a.5.5 0 0 0 0-1H9z"/>
+                  <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zm3.915 10L3.102 4h10.796l-1.313 7z"/>
+                </svg>
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -96,17 +123,37 @@ export function ProductCard({ product }: ProductCardProps) {
             <small className="text-muted ms-1">per kg</small>
           </span>
           
-          <button
-            onClick={handleOrderClick}
-            className="btn btn-sm btn-success d-flex align-items-center gap-1"
-            aria-label={`Order ${product.name}`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-cart-plus" viewBox="0 0 16 16">
-              <path d="M9 5.5a.5.5 0 0 0-1 0V7H6.5a.5.5 0 0 0 0 1H8v1.5a.5.5 0 0 0 1 0V8h1.5a.5.5 0 0 0 0-1H9z"/>
-              <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zm3.915 10L3.102 4h10.796l-1.313 7z"/>
-            </svg>
-            Order
-          </button>
+          <div className="d-flex gap-1">
+            <button
+              onClick={handleAddToCart}
+              className={`btn btn-sm btn-warning d-flex align-items-center ${isAddingToCart ? 'animate-pulse' : ''}`}
+              aria-label={`Add ${product.name} to cart`}
+              disabled={isAddingToCart}
+            >
+              {isAddingToCart ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-cart-plus me-1" viewBox="0 0 16 16">
+                    <path d="M9 5.5a.5.5 0 0 0-1 0V7H6.5a.5.5 0 0 0 0 1H8v1.5a.5.5 0 0 0 1 0V8h1.5a.5.5 0 0 0 0-1H9z"/>
+                    <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zm3.915 10L3.102 4h10.796l-1.313 7z"/>
+                  </svg>
+                  Add
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={handleOrderClick}
+              className="btn btn-sm btn-success"
+              aria-label={`Order ${product.name}`}
+            >
+              Buy
+            </button>
+          </div>
         </div>
       </div>
     </div>
