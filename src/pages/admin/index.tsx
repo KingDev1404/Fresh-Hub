@@ -1,252 +1,220 @@
-import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
-import { useSession } from "next-auth/react";
-import Head from "next/head";
-import { 
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
-import { OrderStatusBadge } from "@/components/order-status-badge";
-import { formatCurrency } from "@/lib/utils";
-import { useToast } from "@/components/ui/use-toast";
+import * as React from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
+import { Navbar } from '@/components/navbar';
+import { OrderStatusBadge } from '@/components/order-status-badge';
+import { formatCurrency } from '@/lib/utils';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { toast } = useToast();
-  const [orders, setOrders] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalOrders: 0,
-    pendingOrders: 0,
-    inProgressOrders: 0,
-    deliveredOrders: 0,
-    totalRevenue: 0,
-  });
+  const [orders, setOrders] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth");
-      return;
+  // Redirect to login if not authenticated or not admin
+  React.useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth');
+    } else if (status === 'authenticated' && session?.user?.role !== 'ADMIN') {
+      router.push('/');
     }
+  }, [status, session, router]);
 
-    if (status === "authenticated") {
-      if (session?.user?.role !== "ADMIN") {
-        router.push("/");
-        return;
-      }
-      
+  // Fetch orders when authenticated as admin
+  React.useEffect(() => {
+    if (status === 'authenticated' && session?.user?.role === 'ADMIN') {
       fetchOrders();
     }
   }, [status, session]);
 
   const fetchOrders = async () => {
-    setIsLoading(true);
     try {
-      const response = await fetch("/api/orders?all=true");
-      if (response.ok) {
-        const data = await response.json();
-        setOrders(data);
-        calculateStats(data);
+      setLoading(true);
+      const response = await fetch('/api/orders');
+      if (!response.ok) {
+        throw new Error('Failed to fetch orders');
       }
-    } catch (error) {
-      console.error("Error fetching orders:", error);
+
+      const data = await response.json();
+      setOrders(data);
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+      setError('Failed to load orders. Please try again later.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const calculateStats = (orders: any[]) => {
-    const stats = orders.reduce((acc, order) => {
-      acc.totalOrders++;
-      acc.totalRevenue += order.totalAmount;
-      
-      if (order.status === "PENDING") acc.pendingOrders++;
-      if (order.status === "IN_PROGRESS") acc.inProgressOrders++;
-      if (order.status === "DELIVERED") acc.deliveredOrders++;
-      
-      return acc;
-    }, {
-      totalOrders: 0,
-      pendingOrders: 0,
-      inProgressOrders: 0,
-      deliveredOrders: 0,
-      totalRevenue: 0,
-    });
-    
-    setStats(stats);
-  };
-
-  const handleStatusChange = async (orderId: number, newStatus: string) => {
+  const handleStatusUpdate = async (orderId: number, newStatus: string) => {
     try {
       const response = await fetch(`/api/orders/${orderId}`, {
-        method: "PUT",
+        method: 'PUT',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ status: newStatus }),
       });
 
-      if (response.ok) {
-        toast({
-          title: "Order status updated",
-          description: `Order #${orderId} status changed to ${newStatus}`,
-        });
-        // Update local state
-        setOrders(
-          orders.map((order: any) =>
-            order.id === orderId ? { ...order, status: newStatus } : order
-          )
-        );
-        // Recalculate stats
-        calculateStats(
-          orders.map((order: any) =>
-            order.id === orderId ? { ...order, status: newStatus } : order
-          )
-        );
-      } else {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to update order status");
+      if (!response.ok) {
+        throw new Error('Failed to update order status');
       }
-    } catch (error: any) {
-      toast({
-        title: "Error updating order status",
-        description: error.message,
-        variant: "destructive",
-      });
+
+      // Refresh orders after successful update
+      fetchOrders();
+    } catch (err) {
+      console.error('Error updating order status:', err);
+      alert('Failed to update order status. Please try again.');
     }
   };
 
-  // Check if user is authenticated and is an admin
-  if (status === "loading") {
-    return <div className="text-center py-10">Loading...</div>;
+  if (status === 'loading') {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+      </div>
+    );
   }
 
-  if (status === "unauthenticated" || (session && session.user?.role !== "ADMIN")) {
-    return null; // Redirect handled in useEffect
+  // If not admin, don't render the page (will redirect via useEffect)
+  if (status === 'authenticated' && session?.user?.role !== 'ADMIN') {
+    return null;
   }
 
   return (
     <>
       <Head>
-        <title>Admin Dashboard - FreshHarvest</title>
+        <title>Admin Dashboard | FreshHarvest</title>
       </Head>
 
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          <Button onClick={() => router.push("/admin/products")} variant="outline">
-            Manage Products
-          </Button>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalOrders}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingOrders}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.inProgressOrders}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</div>
-            </CardContent>
-          </Card>
-        </div>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="md:flex md:items-center md:justify-between mb-8">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+            </div>
+            <div className="mt-4 flex md:mt-0 md:ml-4">
+              <Link href="/admin/products" legacyBehavior>
+                <a className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                  Manage Products
+                </a>
+              </Link>
+            </div>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Orders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-10">Loading orders...</div>
+          <div className="bg-white shadow rounded-lg mb-8 p-6">
+            <h2 className="text-lg font-medium mb-4">Order Management</h2>
+
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+              </div>
+            ) : error ? (
+              <div className="text-center p-8 bg-red-50 rounded-lg">
+                <p className="text-red-600">{error}</p>
+                <button
+                  onClick={fetchOrders}
+                  className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md"
+                >
+                  Try Again
+                </button>
+              </div>
             ) : orders.length === 0 ? (
-              <div className="text-center py-10">No orders found</div>
+              <div className="text-center p-8 bg-gray-50 rounded-lg">
+                <p className="text-gray-600">No orders found in the system.</p>
+              </div>
             ) : (
-              <Table>
-                <TableCaption>List of all customer orders</TableCaption>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Order ID</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Items</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orders.map((order: any) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">#{order.id}</TableCell>
-                      <TableCell>
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>{order.deliveryName}</TableCell>
-                      <TableCell>{order.orderItems.length} item(s)</TableCell>
-                      <TableCell>{formatCurrency(order.totalAmount)}</TableCell>
-                      <TableCell>
-                        <OrderStatusBadge status={order.status} />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Select
-                            value={order.status}
-                            onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                            className="w-36 text-xs h-8"
-                          >
-                            <option value="PENDING">Pending</option>
-                            <option value="IN_PROGRESS">In Progress</option>
-                            <option value="DELIVERED">Delivered</option>
-                          </Select>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => router.push(`/order/${order.id}`)}
-                            className="text-xs"
-                          >
-                            View
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Order ID
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Customer
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Date
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Total
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Status
+                      </th>
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {orders.map((order) => (
+                      <tr key={order.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          #{order.id}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{order.deliveryName}</div>
+                          <div className="text-sm text-gray-500">{order.deliveryPhone}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {formatCurrency(order.totalAmount)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <OrderStatusBadge status={order.status} />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            <Link href={`/orders/${order.id}`} legacyBehavior>
+                              <a className="text-green-600 hover:text-green-900">View</a>
+                            </Link>
+                            <div className="border-l border-gray-300 pl-2">
+                              <select
+                                value={order.status}
+                                onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
+                                className="text-sm border-gray-300 rounded-md"
+                              >
+                                <option value="PENDING">Pending</option>
+                                <option value="IN_PROGRESS">In Progress</option>
+                                <option value="DELIVERED">Delivered</option>
+                              </select>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </main>
       </div>
     </>
   );
