@@ -22,14 +22,18 @@ interface CartContextType {
 export const CartContext = React.createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  // Try to load cart from localStorage on initial render
-  const [items, setItems] = React.useState<CartItem[]>(() => {
+  // Initialize with empty array first to avoid hydration mismatch
+  const [items, setItems] = React.useState<CartItem[]>([]);
+  
+  // Load cart from localStorage after component mounts (client-side only)
+  React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedCart = localStorage.getItem('cart');
-      return savedCart ? JSON.parse(savedCart) : [];
+      if (savedCart) {
+        setItems(JSON.parse(savedCart));
+      }
     }
-    return [];
-  });
+  }, []);
 
   // Save cart to localStorage whenever it changes
   React.useEffect(() => {

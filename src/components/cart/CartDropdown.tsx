@@ -8,6 +8,12 @@ export function CartDropdown() {
   const { items, removeItem, updateQuantity, getTotal, getTotalItems } = useCart();
   const [isOpen, setIsOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+  // Client-side only rendering to avoid hydration errors
+  const [isMounted, setIsMounted] = React.useState(false);
+  
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
@@ -34,6 +40,24 @@ export function CartDropdown() {
 
   const totalItems = getTotalItems();
 
+  // Don't render with cart data until client-side hydration is complete
+  if (!isMounted) {
+    return (
+      <div className="position-relative" ref={dropdownRef}>
+        <button 
+          className="btn btn-sm btn-warning position-relative"
+          aria-label="Shopping cart"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-cart3 me-1" viewBox="0 0 16 16">
+            <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .49.598l-1 5a.5.5 0 0 1-.465.401L5.5 9.5l-.002.2a.5.5 0 0 0 .5.5h6.25a.5.5 0 0 1 0 1H5.5a1.5 1.5 0 0 1-1.493-1.645L4 9l-.935-4.8H1.5a.5.5 0 0 1-.5-.5ZM3.102 4l.84 4.479 9.144-.459L13.89 4H3.102ZM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/>
+          </svg>
+          Cart
+        </button>
+      </div>
+    );
+  }
+  
+  // Full component render once mounted client-side
   return (
     <div className="position-relative" ref={dropdownRef}>
       <button 
@@ -66,7 +90,7 @@ export function CartDropdown() {
             {items.length === 0 ? (
               <div className="text-center p-4 text-muted">
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" className="bi bi-cart mb-3" viewBox="0 0 16 16">
-                  <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .49.598l-1 5a.5.5 0 0 1-.465.401l-9.397.472L4.415 11H13a.5.5 0 0 1 0 1H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l.84 4.479 9.144-.459L13.89 4H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                  <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .49.598l-1 5a.5.5 0 0 1-.465.401l-9.397.472L4.415 11H13a.5.5 0 0 1 0 1H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l.84 4.479 9.144-.459L13.89 4H3.102zM5 12a2 2 0 1 0 0 4a2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4a2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2a1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2a1 1 0 0 1 0-2z"/>
                 </svg>
                 <p className="mb-0">Your cart is empty</p>
               </div>
