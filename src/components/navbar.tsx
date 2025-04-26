@@ -20,149 +20,108 @@ export function Navbar() {
   // Check if the user is an admin
   const isAdmin = session?.user?.email === 'admin@example.com';
 
-  return (
-    <header className="bg-white border-b border-gray-200">
-      <nav className="w-full mx-auto px-4 sm:px-6 lg:px-8" aria-label="Top">
-        <div className="flex w-full justify-between items-center h-14">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link href="/" legacyBehavior>
-              <a className="text-lg font-bold text-green-600">FreshHarvest</a>
-            </Link>
-          </div>
+  React.useEffect(() => {
+    // Add animation class to navbar on scroll
+    const handleScroll = () => {
+      const navbar = document.getElementById('main-navbar');
+      if (navbar) {
+        if (window.scrollY > 50) {
+          navbar.classList.add('navbar-scrolled', 'shadow-sm');
+        } else {
+          navbar.classList.remove('navbar-scrolled', 'shadow-sm');
+        }
+      }
+    };
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center space-x-4 ml-10">
-            <Link href="/" legacyBehavior>
-              <a className={`px-2 py-1 text-sm font-medium ${router.pathname === '/' ? 'text-green-600' : 'text-gray-500 hover:text-gray-900'}`}>
-                Products
-              </a>
-            </Link>
-            
-            {session && (
-              <Link href="/orders" legacyBehavior>
-                <a className={`px-2 py-1 text-sm font-medium ${router.pathname.startsWith('/orders') ? 'text-green-600' : 'text-gray-500 hover:text-gray-900'}`}>
-                  My Orders
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <nav className="navbar navbar-expand-lg navbar-light bg-white animate-fade-in" id="main-navbar">
+      <div className="container">
+        <Link href="/" legacyBehavior>
+          <a className="navbar-brand fw-bold text-success animate-pulse">
+            FreshHarvest
+          </a>
+        </Link>
+        
+        <button 
+          className="navbar-toggler" 
+          type="button" 
+          onClick={toggleMenu}
+          aria-controls="navbarContent" 
+          aria-expanded={isMenuOpen ? "true" : "false"} 
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
+        
+        <div className={`collapse navbar-collapse ${isMenuOpen ? 'show' : ''}`} id="navbarContent">
+          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+            <li className="nav-item">
+              <Link href="/" legacyBehavior>
+                <a className={`nav-link ${router.pathname === '/' ? 'active fw-semibold text-success' : ''}`}>
+                  Products
                 </a>
               </Link>
+            </li>
+            
+            {session && (
+              <li className="nav-item">
+                <Link href="/orders" legacyBehavior>
+                  <a className={`nav-link ${router.pathname.startsWith('/orders') ? 'active fw-semibold text-success' : ''}`}>
+                    My Orders
+                  </a>
+                </Link>
+              </li>
             )}
-
+            
             {isAdmin && (
               <>
-                <Link href="/admin" legacyBehavior>
-                  <a className={`px-2 py-1 text-sm font-medium ${router.pathname === '/admin' ? 'text-green-600' : 'text-gray-500 hover:text-gray-900'}`}>
-                    Admin
-                  </a>
-                </Link>
-                <Link href="/admin/products" legacyBehavior>
-                  <a className={`px-2 py-1 text-sm font-medium ${router.pathname === '/admin/products' ? 'text-green-600' : 'text-gray-500 hover:text-gray-900'}`}>
-                    Products
-                  </a>
-                </Link>
+                <li className="nav-item">
+                  <Link href="/admin" legacyBehavior>
+                    <a className={`nav-link ${router.pathname === '/admin' ? 'active fw-semibold text-success' : ''}`}>
+                      Admin
+                    </a>
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link href="/admin/products" legacyBehavior>
+                    <a className={`nav-link ${router.pathname === '/admin/products' ? 'active fw-semibold text-success' : ''}`}>
+                      Manage Products
+                    </a>
+                  </Link>
+                </li>
               </>
             )}
-          </div>
-
-          {/* Right side: Auth controls */}
-          <div className="flex items-center">
+          </ul>
+          
+          <div className="d-flex align-items-center">
             {status === 'loading' ? (
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
+              <div className="spinner-border spinner-border-sm text-success" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
             ) : session ? (
-              <div className="hidden md:flex items-center gap-2">
-                <span className="text-xs text-gray-600">{session.user?.name || session.user?.email}</span>
+              <div className="d-flex align-items-center">
+                <span className="text-muted me-2 small">{session.user?.name || session.user?.email}</span>
                 <button
                   onClick={handleSignOut}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs font-medium"
+                  className="btn btn-sm btn-outline-success"
                 >
                   Sign out
                 </button>
               </div>
             ) : (
               <Link href="/auth" legacyBehavior>
-                <a className="hidden md:block bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs font-medium">
+                <a className="btn btn-sm btn-success animate-pulse">
                   Sign in
                 </a>
               </Link>
             )}
-
-            {/* Mobile menu button */}
-            <button
-              onClick={toggleMenu}
-              className="md:hidden ml-2 p-1 rounded-md text-gray-400 hover:text-gray-500"
-            >
-              <span className="sr-only">{isMenuOpen ? 'Close menu' : 'Open menu'}</span>
-              {isMenuOpen ? (
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
           </div>
         </div>
-
-        {/* Mobile menu */}
-        {isMenuOpen && (
-          <div className="md:hidden py-2 border-t border-gray-200">
-            <div className="space-y-1">
-              <Link href="/" legacyBehavior>
-                <a className={`block px-3 py-2 text-sm ${router.pathname === '/' ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
-                  Products
-                </a>
-              </Link>
-              
-              {session && (
-                <Link href="/orders" legacyBehavior>
-                  <a className={`block px-3 py-2 text-sm ${router.pathname.startsWith('/orders') ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
-                    My Orders
-                  </a>
-                </Link>
-              )}
-
-              {isAdmin && (
-                <>
-                  <Link href="/admin" legacyBehavior>
-                    <a className={`block px-3 py-2 text-sm ${router.pathname === '/admin' ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
-                      Admin Dashboard
-                    </a>
-                  </Link>
-                  <Link href="/admin/products" legacyBehavior>
-                    <a className={`block px-3 py-2 text-sm ${router.pathname === '/admin/products' ? 'text-green-600 font-medium' : 'text-gray-500'}`}>
-                      Manage Products
-                    </a>
-                  </Link>
-                </>
-              )}
-
-              {/* Mobile auth controls */}
-              {session ? (
-                <div className="pt-4 pb-2 border-t border-gray-200">
-                  <div className="flex items-center px-3">
-                    <span className="text-sm font-medium text-gray-800">{session.user?.name || 'User'}</span>
-                  </div>
-                  <button
-                    onClick={handleSignOut}
-                    className="block mt-2 w-full text-left px-3 py-2 text-sm text-gray-500"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              ) : (
-                <div className="pt-2 pb-2 border-t border-gray-200">
-                  <Link href="/auth" legacyBehavior>
-                    <a className="block w-full text-center mt-2 mx-3 bg-green-600 text-white px-3 py-1 rounded text-sm">
-                      Sign in
-                    </a>
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </nav>
-    </header>
+      </div>
+    </nav>
   );
 }

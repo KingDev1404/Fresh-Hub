@@ -16,6 +16,7 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
   const [imageError, setImageError] = React.useState(false);
+  const [isHovered, setIsHovered] = React.useState(false);
   
   const handleOrderClick = () => {
     router.push(`/orders/new?productId=${product.id}`);
@@ -38,46 +39,71 @@ export function ProductCard({ product }: ProductCardProps) {
     return 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
   };
 
+  // Generate random animation delay for staggered appearance
+  const randomDelay = React.useMemo(() => {
+    const delays = ['delay-100', 'delay-200', 'delay-300', 'delay-400', 'delay-500'];
+    return delays[Math.floor(Math.random() * delays.length)];
+  }, []);
+
   return (
-    <div className="group bg-white rounded-md shadow-sm hover:shadow transition-shadow duration-200 flex flex-col max-w-xs mx-auto">
-      {/* Smaller fixed height image container */}
-      <div className="relative w-full h-32 overflow-hidden rounded-t-md">
+    <div 
+      className={`card animate-fade-in ${randomDelay} shadow-sm`}
+      onMouseEnter={() => setIsHovered(true)} 
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className="position-relative">
         <img
           src={imageError ? getCategoryPlaceholder(product.category) : product.imageUrl}
           alt={product.name}
-          className="w-full h-full object-cover object-center"
+          className="card-img-top"
+          style={{ height: '150px', objectFit: 'cover' }}
           onError={handleImageError}
         />
-        <div className="absolute top-1 right-1">
-          <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 border border-green-200">
-            {product.category}
-          </span>
-        </div>
+        <span className="badge badge-category position-absolute top-0 end-0 m-2">
+          {product.category}
+        </span>
+        {isHovered && (
+          <div className="position-absolute top-0 left-0 w-100 h-100 d-flex align-items-center justify-content-center animate-fade-in" 
+               style={{ background: 'rgba(0,0,0,0.3)' }}>
+            <button 
+              className="btn btn-sm btn-success animate-pulse"
+              onClick={handleOrderClick}
+            >
+              Quick Order
+            </button>
+          </div>
+        )}
       </div>
       
-      {/* Smaller content area */}
-      <div className="p-3 flex flex-col">
-        <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">
+      <div className="card-body p-2">
+        <h5 className="card-title fs-6 text-truncate">
           {product.name}
-        </h3>
+        </h5>
         
-        <p className="text-xs text-gray-600 line-clamp-2 mt-1 mb-2 h-8">
+        <p className="card-text text-muted small" style={{ 
+          display: '-webkit-box', 
+          WebkitLineClamp: 2, 
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          height: '32px'
+        }}>
           {product.description}
         </p>
         
-        <div className="flex justify-between items-center pt-2 border-t border-gray-100 mt-auto">
-          <span className="text-sm font-bold text-gray-900">
+        <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+          <span className="fw-bold">
             {formatCurrency(product.price)} 
-            <span className="text-xs text-gray-500 ml-1">per kg</span>
+            <small className="text-muted ms-1">per kg</small>
           </span>
           
           <button
             onClick={handleOrderClick}
-            className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs transition-colors duration-200 flex items-center gap-1"
+            className="btn btn-sm btn-success d-flex align-items-center gap-1"
             aria-label={`Order ${product.name}`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3z" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-cart-plus" viewBox="0 0 16 16">
+              <path d="M9 5.5a.5.5 0 0 0-1 0V7H6.5a.5.5 0 0 0 0 1H8v1.5a.5.5 0 0 0 1 0V8h1.5a.5.5 0 0 0 0-1H9z"/>
+              <path d="M.5 1a.5.5 0 0 0 0 1h1.11l.401 1.607 1.498 7.985A.5.5 0 0 0 4 12h1a2 2 0 1 0 0 4 2 2 0 0 0 0-4h7a2 2 0 1 0 0 4 2 2 0 0 0 0-4h1a.5.5 0 0 0 .491-.408l1.5-8A.5.5 0 0 0 14.5 3H2.89l-.405-1.621A.5.5 0 0 0 2 1zm3.915 10L3.102 4h10.796l-1.313 7z"/>
             </svg>
             Order
           </button>

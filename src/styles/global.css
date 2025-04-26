@@ -1,0 +1,240 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+/* Bootstrap theme overrides */
+:root {
+  --bs-primary: #3d8934;
+  --bs-primary-rgb: 61, 137, 52;
+  --bs-success: #4a9e3f;
+  --bs-success-rgb: 74, 158, 63;
+}
+
+/* Navbar scroll effect */
+.navbar {
+  transition: all 0.3s ease;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.navbar-scrolled {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  backdrop-filter: blur(10px);
+}
+
+/* Custom animations */
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-15px);
+  }
+  60% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-bounce {
+  animation: bounce 2s infinite;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes slideFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+/* Animation utility classes */
+.animate-fade-in {
+  animation: fadeIn 0.8s ease forwards;
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.animate-slide-right {
+  animation: slideFromRight 0.8s ease forwards;
+}
+
+.animate-slide-left {
+  animation: slideFromLeft 0.8s ease forwards;
+}
+
+.animate-rotate {
+  animation: rotate 8s linear infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.3), rgba(255,255,255,0));
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Delay classes */
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-400 {
+  animation-delay: 400ms;
+}
+
+.delay-500 {
+  animation-delay: 500ms;
+}
+
+/* Custom styles */
+.hero-gradient {
+  background: linear-gradient(135deg, #68BB59 0%, #4a9e3f 100%);
+}
+
+.text-shadow {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Hover effects */
+.hover-scale {
+  transition: transform 0.3s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Card styles with Bootstrap integration */
+.card {
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.card-img-top {
+  transition: transform 0.5s ease;
+}
+
+.card:hover .card-img-top {
+  transform: scale(1.1);
+}
+
+/* Navbar customization */
+.navbar {
+  transition: all 0.3s ease;
+}
+
+.navbar-brand {
+  font-weight: bold;
+}
+
+.btn-success {
+  background-color: #4a9e3f;
+  border-color: #4a9e3f;
+}
+
+.btn-success:hover {
+  background-color: #3d8934;
+  border-color: #3d8934;
+}
+
+/* Custom badge style */
+.badge-category {
+  background-color: rgba(74, 158, 63, 0.2);
+  color: #4a9e3f;
+  border: 1px solid rgba(74, 158, 63, 0.3);
+  font-size: 0.7rem;
+}
