@@ -1,32 +1,41 @@
-import { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth/next";
-import { prisma } from "@/lib/db";
-import { authOptions } from "@/lib/auth";
+import { NextApiRequest, NextApiResponse } from 'next';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../auth/[...nextauth]';
+import { prisma } from '@/lib/prisma';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { id } = req.query;
-  const orderId = Number(id);
   const session = await getServerSession(req, res, authOptions);
-  
+
+  // Check if user is authenticated
   if (!session) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: 'Unauthorized' });
   }
+
+  const { id } = req.query;
+  const orderId = parseInt(id as string);
 
   if (isNaN(orderId)) {
-    return res.status(400).json({ message: "Invalid order ID" });
+    return res.status(400).json({ message: 'Invalid order ID' });
   }
 
-  // Get a specific order
-  if (req.method === "GET") {
+  // GET: Fetch a single order
+  if (req.method === 'GET') {
     try {
       const order = await prisma.order.findUnique({
         where: {
           id: orderId,
         },
         include: {
+          buyer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
           orderItems: {
             include: {
               product: true,
@@ -36,40 +45,53 @@ export default async function handler(
       });
 
       if (!order) {
-        return res.status(404).json({ message: "Order not found" });
+        return res.status(404).json({ message: 'Order not found' });
       }
 
-      // Check if the user is authorized to view this order
-      const isAdmin = session.user.role === "ADMIN";
-      const isOwner = order.buyerId === Number(session.user.id);
-      
-      if (!isAdmin && !isOwner) {
-        return res.status(403).json({ message: "Access denied" });
+      // Check if user is authorized to view this order (admin or order owner)
+      if (session.user.role !== 'ADMIN' && order.buyerId !== Number(session.user.id)) {
+        return res.status(403).json({ message: 'Forbidden: You do not have permission to view this order' });
       }
 
       return res.status(200).json(order);
     } catch (error) {
-      console.error("Error fetching order:", error);
-      return res.status(500).json({ message: "Failed to fetch order" });
+      console.error('Error fetching order:', error);
+      return res.status(500).json({ message: 'Internal server error' });
     }
   }
 
-  // Update order status (admin only)
-  if (req.method === "PUT") {
-    try {
-      const isAdmin = session.user.role === "ADMIN";
-      
-      if (!isAdmin) {
-        return res.status(403).json({ message: "Only admins can update order status" });
-      }
+  // PUT: Update order status (admin only)
+  if (req.method === 'PUT') {
+    // Only admins can update order status
+    if (session.user.role !== 'ADMIN') {
+      return res.status(403).json({ message: 'Forbidden: Admin access required' });
+    }
 
+    try {
       const { status } = req.body;
 
-      if (!status || !["PENDING", "IN_PROGRESS", "DELIVERED"].includes(status)) {
-        return res.status(400).json({ message: "Invalid status value" });
+      if (!status) {
+        return res.status(400).json({ message: 'Missing status field' });
       }
 
-      const order = await prisma.order.update({
+      // Validate status
+      if (!['PENDING', 'IN_PROGRESS', 'DELIVERED'].includes(status)) {
+        return res.status(400).json({ message: 'Invalid status value' });
+      }
+
+      // Check if order exists
+      const existingOrder = await prisma.order.findUnique({
+        where: {
+          id: orderId,
+        },
+      });
+
+      if (!existingOrder) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+
+      // Update order status
+      const updatedOrder = await prisma.order.update({
         where: {
           id: orderId,
         },
@@ -77,6 +99,13 @@ export default async function handler(
           status,
         },
         include: {
+          buyer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
           orderItems: {
             include: {
               product: true,
@@ -85,13 +114,13 @@ export default async function handler(
         },
       });
 
-      return res.status(200).json(order);
+      return res.status(200).json(updatedOrder);
     } catch (error) {
-      console.error("Error updating order:", error);
-      return res.status(500).json({ message: "Failed to update order" });
+      console.error('Error updating order:', error);
+      return res.status(500).json({ message: 'Internal server error' });
     }
   }
 
   // Method not allowed
-  return res.status(405).json({ message: "Method not allowed" });
+  return res.status(405).json({ message: 'Method not allowed' });
 }
