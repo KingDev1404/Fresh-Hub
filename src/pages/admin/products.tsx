@@ -13,21 +13,22 @@ export default function AdminProductsPage() {
   const [products, setProducts] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
-  const [showForm, setShowForm] = React.useState(false);
   const [selectedProduct, setSelectedProduct] = React.useState<any>(null);
+  const [showForm, setShowForm] = React.useState(false);
+  const [categoryFilter, setCategoryFilter] = React.useState('');
 
-  // Redirect to login if not authenticated or not admin
+  // Redirect if not authenticated or not admin
   React.useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth');
-    } else if (status === 'authenticated' && session?.user?.role !== 'ADMIN') {
+    } else if (status === 'authenticated' && session.user.role !== 'ADMIN') {
       router.push('/');
     }
   }, [status, session, router]);
 
-  // Fetch products when the component loads
+  // Fetch products when authenticated and is admin
   React.useEffect(() => {
-    if (status === 'authenticated' && session?.user?.role === 'ADMIN') {
+    if (status === 'authenticated' && session.user.role === 'ADMIN') {
       fetchProducts();
     }
   }, [status, session]);
@@ -36,6 +37,7 @@ export default function AdminProductsPage() {
     try {
       setLoading(true);
       const response = await fetch('/api/products');
+      
       if (!response.ok) {
         throw new Error('Failed to fetch products');
       }
@@ -50,19 +52,7 @@ export default function AdminProductsPage() {
     }
   };
 
-  const handleEditProduct = (product: any) => {
-    setSelectedProduct(product);
-    setShowForm(true);
-    window.scrollTo(0, 0);
-  };
-
-  const handleAddNewProduct = () => {
-    setSelectedProduct(null);
-    setShowForm(true);
-    window.scrollTo(0, 0);
-  };
-
-  const handleDeleteProduct = async (productId: number) => {
+  const deleteProduct = async (productId: number) => {
     if (!confirm('Are you sure you want to delete this product?')) {
       return;
     }
@@ -76,12 +66,22 @@ export default function AdminProductsPage() {
         throw new Error('Failed to delete product');
       }
 
-      // Refresh the product list
-      fetchProducts();
+      // Remove the product from state
+      setProducts(products.filter(product => product.id !== productId));
     } catch (err) {
       console.error('Error deleting product:', err);
       alert('Failed to delete product. Please try again.');
     }
+  };
+
+  const handleEditClick = (product: any) => {
+    setSelectedProduct(product);
+    setShowForm(true);
+  };
+
+  const handleAddNewClick = () => {
+    setSelectedProduct(null);
+    setShowForm(true);
   };
 
   const handleFormSuccess = () => {
@@ -89,7 +89,17 @@ export default function AdminProductsPage() {
     fetchProducts();
   };
 
-  if (status === 'loading') {
+  // Get unique categories
+  const categories = React.useMemo(() => {
+    return ['', ...new Set(products.map(product => product.category))];
+  }, [products]);
+
+  // Filter products by category
+  const filteredProducts = categoryFilter
+    ? products.filter(product => product.category === categoryFilter)
+    : products;
+
+  if (status === 'loading' || loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
@@ -97,133 +107,186 @@ export default function AdminProductsPage() {
     );
   }
 
-  // If not admin, don't render the page (will redirect via useEffect)
-  if (status === 'authenticated' && session?.user?.role !== 'ADMIN') {
-    return null;
+  if (status === 'authenticated' && session.user.role !== 'ADMIN') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center p-8 bg-red-50 rounded-lg">
+          <p className="text-red-600 mb-4">You don't have permission to access this page.</p>
+          <Link href="/" legacyBehavior>
+            <a className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+              Return to Home
+            </a>
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
     <>
       <Head>
-        <title>Manage Products | FreshHarvest Admin</title>
+        <title>Manage Products | FreshHarvest</title>
       </Head>
 
       <div className="min-h-screen bg-gray-50">
         <Navbar />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="md:flex md:items-center md:justify-between mb-6">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Manage Products</h1>
+              <p className="text-gray-600 mt-1">
+                Add, edit, or remove products from your inventory
+              </p>
             </div>
-            <div className="mt-4 flex md:mt-0 md:ml-4">
+            <div className="mt-4 flex space-x-3 sm:mt-0">
               <Link href="/admin" legacyBehavior>
-                <a className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                <a className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
                   Back to Dashboard
                 </a>
               </Link>
-              {!showForm && (
-                <button
-                  onClick={handleAddNewProduct}
-                  className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  Add New Product
-                </button>
-              )}
+              <button
+                onClick={handleAddNewClick}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700"
+              >
+                Add New Product
+              </button>
             </div>
           </div>
 
           {showForm ? (
-            <div className="mb-8">
-              <button
-                onClick={() => setShowForm(false)}
-                className="mb-4 text-green-600 hover:text-green-800 flex items-center"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 mr-1"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                Back to Products
-              </button>
-              <ProductForm product={selectedProduct} onSuccess={handleFormSuccess} />
-            </div>
-          ) : loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
-            </div>
-          ) : error ? (
-            <div className="text-center p-8 bg-red-50 rounded-lg">
-              <p className="text-red-600">{error}</p>
-              <button
-                onClick={fetchProducts}
-                className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md"
-              >
-                Try Again
-              </button>
-            </div>
-          ) : products.length === 0 ? (
-            <div className="text-center p-8 bg-white rounded-lg shadow">
-              <p className="text-gray-600 mb-4">No products found in the system.</p>
-              <button
-                onClick={handleAddNewProduct}
-                className="bg-green-600 text-white px-4 py-2 rounded-md"
-              >
-                Add Your First Product
-              </button>
+            <div className="mb-6">
+              <ProductForm 
+                product={selectedProduct} 
+                onSuccess={handleFormSuccess} 
+              />
             </div>
           ) : (
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              <ul className="divide-y divide-gray-200">
-                {products.map((product) => (
-                  <li key={product.id}>
-                    <div className="px-4 py-4 sm:px-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-12 w-12 bg-gray-100 rounded-md overflow-hidden">
-                            <img
-                              src={product.imageUrl}
-                              alt={product.name}
-                              className="h-12 w-12 object-cover"
-                            />
-                          </div>
-                          <div className="ml-4">
-                            <p className="text-sm font-medium text-green-600 truncate">
-                              {product.name}
-                            </p>
-                            <p className="text-sm text-gray-500 truncate">{product.category}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {formatCurrency(product.price)}/kg
-                          </span>
-                          <button
-                            onClick={() => handleEditProduct(product)}
-                            className="ml-2 text-sm font-medium text-indigo-600 hover:text-indigo-900"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteProduct(product.id)}
-                            className="ml-2 text-sm font-medium text-red-600 hover:text-red-900"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-500 line-clamp-2">{product.description}</p>
+            <>
+              <div className="mb-6">
+                <label htmlFor="category-filter" className="block text-sm font-medium text-gray-700">
+                  Filter by Category
+                </label>
+                <select
+                  id="category-filter"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
+                >
+                  <option value="">All Categories</option>
+                  {categories.filter(Boolean).map(category => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {error ? (
+                <div className="text-center p-8 bg-red-50 rounded-lg">
+                  <p className="text-red-600">{error}</p>
+                  <button
+                    onClick={fetchProducts}
+                    className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center p-8 bg-white rounded-lg shadow">
+                  <p className="text-gray-600 mb-4">
+                    {categoryFilter
+                      ? `No products found in the "${categoryFilter}" category.`
+                      : 'No products found.'}
+                  </p>
+                  <button
+                    onClick={handleAddNewClick}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700"
+                  >
+                    Add Your First Product
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  <div className="-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                    <div className="py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8">
+                      <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Product
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Category
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Price
+                              </th>
+                              <th scope="col" className="relative px-6 py-3">
+                                <span className="sr-only">Actions</span>
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {filteredProducts.map((product) => (
+                              <tr key={product.id}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center">
+                                    <div className="flex-shrink-0 h-10 w-10">
+                                      <img
+                                        className="h-10 w-10 rounded-full object-cover"
+                                        src={product.imageUrl}
+                                        alt={product.name}
+                                        onError={(e) => {
+                                          e.currentTarget.src = 'https://via.placeholder.com/40?text=Error';
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="ml-4">
+                                      <div className="text-sm font-medium text-gray-900">
+                                        {product.name}
+                                      </div>
+                                      <div className="text-sm text-gray-500 truncate max-w-xs">
+                                        {product.description.length > 50
+                                          ? `${product.description.substring(0, 50)}...`
+                                          : product.description}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    {product.category}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {formatCurrency(product.price)} / kg
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                  <button
+                                    onClick={() => handleEditClick(product)}
+                                    className="text-indigo-600 hover:text-indigo-900 mr-4"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => deleteProduct(product.id)}
+                                    className="text-red-600 hover:text-red-900"
+                                  >
+                                    Delete
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
