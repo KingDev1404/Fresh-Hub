@@ -2,7 +2,6 @@
   "/_app": "pages/_app.js",
   "/_error": "pages/_error.js",
   "/_document": "pages/_document.js",
-  "/orders/new": "pages/orders/new.js",
   "/auth": "pages/auth.js",
   "/orders/[id]": "pages/orders/[id].js",
   "/": "pages/index.js",
