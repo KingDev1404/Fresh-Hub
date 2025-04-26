@@ -131,22 +131,25 @@ export function OrderForm({ productId }: OrderFormProps) {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+      <div className="d-flex justify-content-center align-items-center py-5">
+        <div className="spinner-border text-success" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
       </div>
     );
   }
 
   if (!product) {
     return (
-      <div className="text-center p-6 bg-red-50 rounded-lg">
-        <p className="text-red-600">
+      <div className="alert alert-danger text-center p-4 animate-fade-in">
+        <p>
           {error || 'Product not found. Please select a valid product.'}
         </p>
         <button
           onClick={() => router.push('/')}
-          className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md"
+          className="btn btn-success mt-3 animate-pulse"
         >
+          <i className="bi bi-arrow-left-circle me-2"></i>
           Browse Products
         </button>
       </div>
@@ -156,131 +159,195 @@ export function OrderForm({ productId }: OrderFormProps) {
   const totalPrice = product.price * formData.quantity;
 
   return (
-    <div className="bg-white shadow-md rounded-lg p-6">
-      <div className="mb-6 flex flex-col md:flex-row">
-        <div className="md:w-1/3 mb-4 md:mb-0 md:pr-6">
-          <div className="bg-gray-200 rounded-md overflow-hidden h-48 w-full">
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
+    <div className="card shadow animate-fade-in">
+      <div className="card-body p-4">
+        <div className="row mb-4">
+          <div className="col-md-4 mb-3 mb-md-0">
+            <div className="position-relative overflow-hidden rounded h-100 animate-fade-in">
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                className="w-100 h-100 object-fit-cover"
+                style={{ objectFit: 'cover', height: '200px' }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+                }}
+              />
+              <div className="position-absolute top-0 end-0 p-2">
+                <span className="badge badge-category">
+                  {product.category}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="col-md-8 animate-slide-right">
+            <h2 className="card-title h4 fw-bold mb-2">{product.name}</h2>
+            <p className="text-muted mb-3">{product.description}</p>
+            <div className="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+              <span className="text-muted">Price per kg:</span>
+              <span className="fs-5 fw-bold text-success">{formatCurrency(product.price)}</span>
+            </div>
           </div>
         </div>
         
-        <div className="md:w-2/3">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">{product.name}</h2>
-          <p className="text-gray-600 mb-4">{product.description}</p>
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-gray-700">Price per kg:</span>
-            <span className="font-bold text-gray-900">{formatCurrency(product.price)}</span>
+        {error && (
+          <div className="alert alert-danger alert-dismissible fade show animate-fade-in" role="alert">
+            {error}
+            <button type="button" className="btn-close" onClick={() => setError('')} aria-label="Close"></button>
           </div>
-        </div>
-      </div>
-      
-      {error && (
-        <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4">
-          {error}
-        </div>
-      )}
-      
-      <form onSubmit={handleSubmit}>
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="quantity" className="block text-sm font-medium mb-1">
-              Quantity (kg) <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="quantity"
-              name="quantity"
-              type="number"
-              min="1"
-              step="1"
-              value={formData.quantity}
-              onChange={handleChange}
-              className="w-full p-2 border rounded-md"
-              required
-            />
-          </div>
-          
-          <div className="pt-4 border-t border-gray-200">
-            <h3 className="text-lg font-semibold mb-3">Delivery Information</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="deliveryName" className="block text-sm font-medium mb-1">
-                  Full Name <span className="text-red-500">*</span>
-                </label>
+        )}
+        
+        <form onSubmit={handleSubmit} className="animate-fade-in delay-200">
+          <div className="mb-4">
+            <div className="mb-3">
+              <label htmlFor="quantity" className="form-label fw-semibold">
+                Quantity (kg) <span className="text-danger">*</span>
+              </label>
+              <div className="input-group">
+                <span className="input-group-text bg-light">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-box-seam" viewBox="0 0 16 16">
+                    <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2l-2.218-.887zm3.564 1.426L5.596 5 8 5.961 14.154 3.5l-2.404-.961zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/>
+                  </svg>
+                </span>
                 <input
-                  id="deliveryName"
-                  name="deliveryName"
-                  type="text"
-                  value={formData.deliveryName}
+                  id="quantity"
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={formData.quantity}
                   onChange={handleChange}
-                  className="w-full p-2 border rounded-md"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="deliveryPhone" className="block text-sm font-medium mb-1">
-                  Phone Number <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="deliveryPhone"
-                  name="deliveryPhone"
-                  type="tel"
-                  value={formData.deliveryPhone}
-                  onChange={handleChange}
-                  className="w-full p-2 border rounded-md"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="deliveryAddress" className="block text-sm font-medium mb-1">
-                  Delivery Address <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  id="deliveryAddress"
-                  name="deliveryAddress"
-                  value={formData.deliveryAddress}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full p-2 border rounded-md"
+                  className="form-control"
                   required
                 />
               </div>
             </div>
           </div>
-        </div>
+          
+          <div className="mb-4 p-3 border rounded bg-light animate-fade-in delay-300">
+            <h3 className="h5 fw-bold mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-truck me-2" viewBox="0 0 16 16">
+                <path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h9A1.5 1.5 0 0 1 12 3.5V5h1.02a1.5 1.5 0 0 1 1.17.563l1.481 1.85a1.5 1.5 0 0 1 .329.938V10.5a1.5 1.5 0 0 1-1.5 1.5H14a2 2 0 1 1-4 0H5a2 2 0 1 1-3.998-.085A1.5 1.5 0 0 1 0 10.5v-7zm1.294 7.456A1.999 1.999 0 0 1 4.732 11h5.536a2.01 2.01 0 0 1 .732-.732V3.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .294.456zM12 10a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm-8 2a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/>
+              </svg>
+              Delivery Information
+            </h3>
+            
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label htmlFor="deliveryName" className="form-label">
+                  Full Name <span className="text-danger">*</span>
+                </label>
+                <div className="input-group">
+                  <span className="input-group-text">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-person" viewBox="0 0 16 16">
+                      <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4Zm-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664h10Z"/>
+                    </svg>
+                  </span>
+                  <input
+                    id="deliveryName"
+                    name="deliveryName"
+                    type="text"
+                    value={formData.deliveryName}
+                    onChange={handleChange}
+                    className="form-control"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="col-md-6">
+                <label htmlFor="deliveryPhone" className="form-label">
+                  Phone Number <span className="text-danger">*</span>
+                </label>
+                <div className="input-group">
+                  <span className="input-group-text">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-telephone" viewBox="0 0 16 16">
+                      <path d="M3.654 1.328a.678.678 0 0 0-1.015-.063L1.605 2.3c-.483.484-.661 1.169-.45 1.77a17.568 17.568 0 0 0 4.168 6.608 17.569 17.569 0 0 0 6.608 4.168c.601.211 1.286.033 1.77-.45l1.034-1.034a.678.678 0 0 0-.063-1.015l-2.307-1.794a.678.678 0 0 0-.58-.122l-2.19.547a1.745 1.745 0 0 1-1.657-.459L5.482 8.062a1.745 1.745 0 0 1-.46-1.657l.548-2.19a.678.678 0 0 0-.122-.58L3.654 1.328zM1.884.511a1.745 1.745 0 0 1 2.612.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.678.678 0 0 0 .178.643l2.457 2.457a.678.678 0 0 0 .644.178l2.189-.547a1.745 1.745 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.634 18.634 0 0 1-7.01-4.42 18.634 18.634 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877L1.885.511z"/>
+                    </svg>
+                  </span>
+                  <input
+                    id="deliveryPhone"
+                    name="deliveryPhone"
+                    type="tel"
+                    value={formData.deliveryPhone}
+                    onChange={handleChange}
+                    className="form-control"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="col-12">
+                <label htmlFor="deliveryAddress" className="form-label">
+                  Delivery Address <span className="text-danger">*</span>
+                </label>
+                <div className="input-group">
+                  <span className="input-group-text">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-geo-alt" viewBox="0 0 16 16">
+                      <path d="M12.166 8.94c-.524 1.062-1.234 2.12-1.96 3.07A31.493 31.493 0 0 1 8 14.58a31.481 31.481 0 0 1-2.206-2.57c-.726-.95-1.436-2.008-1.96-3.07C3.304 7.867 3 6.862 3 6a5 5 0 0 1 10 0c0 .862-.305 1.867-.834 2.94zM8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10z"/>
+                      <path d="M8 8a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+                    </svg>
+                  </span>
+                  <textarea
+                    id="deliveryAddress"
+                    name="deliveryAddress"
+                    value={formData.deliveryAddress}
+                    onChange={handleChange}
+                    rows={3}
+                    className="form-control"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-lg font-medium">Total Price:</span>
-            <span className="text-xl font-bold text-gray-900">
-              {formatCurrency(totalPrice)}
-            </span>
+          <div className="card bg-light mt-4 mb-4 animate-fade-in delay-400">
+            <div className="card-body">
+              <div className="d-flex justify-content-between align-items-center">
+                <h4 className="h5 mb-0">Total Price:</h4>
+                <div className="fs-4 fw-bold text-success animate-pulse">
+                  {formatCurrency(totalPrice)}
+                </div>
+              </div>
+            </div>
           </div>
           
-          <div className="flex justify-end">
+          <div className="d-flex justify-content-end gap-2 animate-fade-in delay-500">
             <button
               type="button"
               onClick={() => router.back()}
-              className="mr-4 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              className="btn btn-outline-secondary"
             >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-arrow-left me-1" viewBox="0 0 16 16">
+                <path fillRule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+              </svg>
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 disabled:opacity-50"
+              className="btn btn-success"
             >
-              {submitting ? 'Processing...' : 'Place Order'}
+              {submitting ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-bag-check me-1" viewBox="0 0 16 16">
+                    <path fillRule="evenodd" d="M10.854 8.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708 0z"/>
+                    <path d="M8 1a2.5 2.5 0 0 1 2.5 2.5V4h-5v-.5A2.5 2.5 0 0 1 8 1zm3.5 3v-.5a3.5 3.5 0 1 0-7 0V4H1v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V4h-3.5zM2 5h12v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z"/>
+                  </svg>
+                  Place Order
+                </>
+              )}
             </button>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }
