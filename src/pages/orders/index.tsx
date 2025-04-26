@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import { Navbar } from '@/components/navbar';
 import { OrderStatusBadge } from '@/components/order-status-badge';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDateTime } from '@/lib/utils';
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -46,7 +46,7 @@ export default function OrdersPage() {
     }
   };
 
-  if (status === 'loading') {
+  if (status === 'loading' || loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
@@ -64,13 +64,14 @@ export default function OrdersPage() {
         <Navbar />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-8">My Orders</h1>
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">My Orders</h1>
+            <p className="text-gray-600 mt-1">
+              View and track the status of your orders
+            </p>
+          </div>
 
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
-            </div>
-          ) : error ? (
+          {error ? (
             <div className="text-center p-8 bg-red-50 rounded-lg">
               <p className="text-red-600">{error}</p>
               <button
@@ -81,89 +82,59 @@ export default function OrdersPage() {
               </button>
             </div>
           ) : orders.length === 0 ? (
-            <div className="text-center p-12 bg-white rounded-lg shadow-sm">
-              <h2 className="text-xl font-medium text-gray-900 mb-3">No Orders Yet</h2>
-              <p className="text-gray-600 mb-6">
-                You haven't placed any orders yet. Start shopping to place your first order.
-              </p>
+            <div className="text-center p-8 bg-white rounded-lg shadow">
+              <p className="text-gray-600 mb-4">You don't have any orders yet.</p>
               <Link href="/" legacyBehavior>
-                <a className="bg-green-600 text-white px-6 py-2 rounded-md inline-block hover:bg-green-700 transition-colors">
+                <a className="inline-block bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
                   Browse Products
                 </a>
               </Link>
             </div>
           ) : (
-            <div className="bg-white shadow overflow-hidden rounded-lg">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Order ID
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Date
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Total
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Items
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Status
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {orders.map((order) => (
-                      <tr key={order.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          #{order.id}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {formatCurrency(order.totalAmount)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {order.orderItems.length} items
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <OrderStatusBadge status={order.status} />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <Link href={`/orders/${order.id}`} legacyBehavior>
-                            <a className="text-green-600 hover:text-green-900">View Details</a>
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            <div className="bg-white shadow overflow-hidden rounded-md">
+              <ul role="list" className="divide-y divide-gray-200">
+                {orders.map((order) => (
+                  <li key={order.id}>
+                    <Link href={`/orders/${order.id}`} legacyBehavior>
+                      <a className="block hover:bg-gray-50">
+                        <div className="px-4 py-4 sm:px-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <p className="text-sm font-medium text-green-600 truncate">
+                                Order #{order.id}
+                              </p>
+                              <div className="ml-4">
+                                <OrderStatusBadge status={order.status} />
+                              </div>
+                            </div>
+                            <div className="ml-2 flex-shrink-0 flex">
+                              <p className="text-sm text-gray-500">
+                                {formatDateTime(order.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-2 sm:flex sm:justify-between">
+                            <div className="sm:flex">
+                              <p className="flex items-center text-sm text-gray-500">
+                                {order.orderItems.length} {order.orderItems.length === 1 ? 'item' : 'items'}
+                              </p>
+                              <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
+                                Delivery to: {order.deliveryName}
+                              </p>
+                            </div>
+                            <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
+                              <span className="font-medium text-gray-900">
+                                {formatCurrency(order.totalAmount)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </a>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </main>

@@ -7,8 +7,8 @@ import { OrderForm } from '@/components/order-form';
 
 export default function OrderNewPage() {
   const router = useRouter();
-  const { productId } = router.query;
   const { data: session, status } = useSession();
+  const { productId } = router.query;
 
   // Redirect to login if not authenticated
   React.useEffect(() => {
@@ -28,20 +28,21 @@ export default function OrderNewPage() {
   return (
     <>
       <Head>
-        <title>Place New Order | FreshHarvest</title>
+        <title>Place Your Order | FreshHarvest</title>
       </Head>
 
       <div className="min-h-screen bg-gray-50">
         <Navbar />
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-8 text-center">
-            Place Your Order
-          </h1>
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">Place Your Order</h1>
+            <p className="text-gray-600 mt-1">
+              Fill in the details below to complete your purchase
+            </p>
+          </div>
 
-          {status === 'authenticated' && (
-            <OrderForm productId={productId ? parseInt(productId as string) : undefined} />
-          )}
+          <OrderForm productId={productId ? parseInt(productId as string) : undefined} />
         </main>
       </div>
     </>
