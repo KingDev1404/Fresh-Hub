@@ -1,18 +1,6 @@
-import Image from "next/image";
-import { useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/router";
-import { 
-  Card, 
-  CardContent, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
-import { useToast } from "@/components/ui/use-toast";
+import * as React from 'react';
+import Link from 'next/link';
+import { formatCurrency } from '@/lib/utils';
 
 interface ProductCardProps {
   product: {
@@ -26,56 +14,41 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const { data: session } = useSession();
-  const router = useRouter();
-  const { toast } = useToast();
-  
-  const handleOrderClick = () => {
-    if (!session) {
-      toast({
-        title: "Authentication required",
-        description: "Please login to place an order",
-        variant: "destructive",
-      });
-      router.push("/auth");
-      return;
-    }
-    
-    router.push({
-      pathname: "/orders",
-      query: { productId: product.id },
-    });
+  const truncateDescription = (text: string, maxLength: number = 100) => {
+    if (text.length <= maxLength) return text;
+    return text.slice(0, maxLength) + '...';
   };
 
   return (
-    <Card className="overflow-hidden flex flex-col h-full">
-      <div className="relative h-48 w-full">
+    <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+      <div className="h-48 overflow-hidden bg-gray-100">
         <img
           src={product.imageUrl}
           alt={product.name}
-          className="object-cover w-full h-full"
+          className="w-full h-full object-cover"
         />
       </div>
-      <CardHeader className="pb-2">
+      <div className="p-4">
         <div className="flex justify-between items-start">
-          <CardTitle className="text-lg">{product.name}</CardTitle>
-          <span className="font-bold text-green-600">{formatCurrency(product.price)}/kg</span>
+          <h3 className="text-lg font-semibold">{product.name}</h3>
+          <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+            {product.category}
+          </span>
         </div>
-        <CardDescription className="text-xs uppercase tracking-wide">
-          {product.category}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pb-2 flex-grow">
-        <p className="text-sm text-gray-600">{product.description}</p>
-      </CardContent>
-      <CardFooter>
-        <Button 
-          onClick={handleOrderClick}
-          className="w-full"
-        >
-          Order Now
-        </Button>
-      </CardFooter>
-    </Card>
+        <p className="text-gray-600 text-sm mt-2">
+          {truncateDescription(product.description)}
+        </p>
+        <div className="mt-4 flex justify-between items-center">
+          <span className="font-bold text-lg">
+            {formatCurrency(product.price)} / kg
+          </span>
+          <Link href={`/orders/new?productId=${product.id}`} legacyBehavior>
+            <a className="bg-green-600 text-white px-3 py-1 rounded-md text-sm hover:bg-green-700 transition-colors">
+              Order Now
+            </a>
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
