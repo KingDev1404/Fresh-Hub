@@ -1,36 +1,20 @@
-#!/usr/bin/env node
+const { spawn } = require('child_process');
+const port = process.env.PORT || 5000;
 
-const { exec } = require('child_process');
-const path = require('path');
-
-// Configuration
-const PORT = 5000;
-
-console.log(`Starting Next.js development server on port ${PORT}...`);
-
-// Command to run Next.js dev server
-const nextCommand = `npx next dev -p ${PORT}`;
-
-// Execute the command
-const nextProcess = exec(nextCommand);
-
-// Forward stdout and stderr
-nextProcess.stdout.on('data', (data) => {
-  process.stdout.write(data);
+// Start Next.js development server
+const nextProcess = spawn('npx', ['next', 'dev', '-p', port, '--hostname', '0.0.0.0'], {
+  stdio: 'inherit',
+  shell: true
 });
 
-nextProcess.stderr.on('data', (data) => {
-  process.stderr.write(data);
+// Handle process termination
+process.on('SIGINT', () => {
+  console.log('Gracefully shutting down...');
+  nextProcess.kill('SIGINT');
+  process.exit(0);
 });
 
-// Handle process exit
-nextProcess.on('exit', (code) => {
+nextProcess.on('close', (code) => {
   console.log(`Next.js process exited with code ${code}`);
   process.exit(code);
-});
-
-// Handle interrupts
-process.on('SIGINT', () => {
-  console.log('Received SIGINT. Shutting down Next.js server...');
-  nextProcess.kill('SIGINT');
 });

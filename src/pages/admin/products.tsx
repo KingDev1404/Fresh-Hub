@@ -1,98 +1,86 @@
-import { useState, useEffect } from "react";
-import { useRouter } from "next/router";
-import { useSession } from "next-auth/react";
-import Head from "next/head";
-import { 
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { ProductForm } from "@/components/product-form";
-import { formatCurrency } from "@/lib/utils";
-import { useToast } from "@/components/ui/use-toast";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import * as React from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
+import { Navbar } from '@/components/navbar';
+import { ProductForm } from '@/components/product-form';
+import { formatCurrency } from '@/lib/utils';
 
-export default function ProductsAdminPage() {
+export default function AdminProductsPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { toast } = useToast();
-  const [products, setProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [products, setProducts] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+  const [showForm, setShowForm] = React.useState(false);
+  const [selectedProduct, setSelectedProduct] = React.useState<any>(null);
 
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth");
-      return;
+  // Redirect to login if not authenticated or not admin
+  React.useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth');
+    } else if (status === 'authenticated' && session?.user?.role !== 'ADMIN') {
+      router.push('/');
     }
+  }, [status, session, router]);
 
-    if (status === "authenticated") {
-      if (session?.user?.role !== "ADMIN") {
-        router.push("/");
-        return;
-      }
-      
+  // Fetch products when the component loads
+  React.useEffect(() => {
+    if (status === 'authenticated' && session?.user?.role === 'ADMIN') {
       fetchProducts();
     }
   }, [status, session]);
 
   const fetchProducts = async () => {
-    setIsLoading(true);
     try {
-      const response = await fetch("/api/products");
-      if (response.ok) {
-        const data = await response.json();
-        setProducts(data);
+      setLoading(true);
+      const response = await fetch('/api/products');
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
       }
-    } catch (error) {
-      console.error("Error fetching products:", error);
+
+      const data = await response.json();
+      setProducts(data);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError('Failed to load products. Please try again later.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleAddNew = () => {
-    setEditingProduct(null);
+  const handleEditProduct = (product: any) => {
+    setSelectedProduct(product);
     setShowForm(true);
+    window.scrollTo(0, 0);
   };
 
-  const handleEdit = (product: any) => {
-    setEditingProduct(product);
+  const handleAddNewProduct = () => {
+    setSelectedProduct(null);
     setShowForm(true);
+    window.scrollTo(0, 0);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this product?")) {
+  const handleDeleteProduct = async (productId: number) => {
+    if (!confirm('Are you sure you want to delete this product?')) {
       return;
     }
 
     try {
-      const response = await fetch(`/api/products/${id}`, {
-        method: "DELETE"
+      const response = await fetch(`/api/products/${productId}`, {
+        method: 'DELETE',
       });
 
-      if (response.ok) {
-        toast({
-          title: "Product deleted successfully",
-        });
-        setProducts(products.filter((product: any) => product.id !== id));
-      } else {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to delete product");
+      if (!response.ok) {
+        throw new Error('Failed to delete product');
       }
-    } catch (error: any) {
-      toast({
-        title: "Error deleting product",
-        description: error.message,
-        variant: "destructive",
-      });
+
+      // Refresh the product list
+      fetchProducts();
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      alert('Failed to delete product. Please try again.');
     }
   };
 
@@ -101,118 +89,143 @@ export default function ProductsAdminPage() {
     fetchProducts();
   };
 
-  // Check if user is authenticated and is an admin
-  if (status === "loading") {
-    return <div className="text-center py-10">Loading...</div>;
+  if (status === 'loading') {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+      </div>
+    );
   }
 
-  if (status === "unauthenticated" || (session && session.user?.role !== "ADMIN")) {
-    return null; // Redirect handled in useEffect
+  // If not admin, don't render the page (will redirect via useEffect)
+  if (status === 'authenticated' && session?.user?.role !== 'ADMIN') {
+    return null;
   }
 
   return (
     <>
       <Head>
-        <title>Manage Products - FreshHarvest</title>
+        <title>Manage Products | FreshHarvest Admin</title>
       </Head>
 
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Manage Products</h1>
-          <div className="flex space-x-2">
-            <Button onClick={() => router.push("/admin")} variant="outline">
-              Dashboard
-            </Button>
-            <Button onClick={handleAddNew} className="flex items-center space-x-1">
-              <Plus className="h-4 w-4" />
-              <span>Add Product</span>
-            </Button>
-          </div>
-        </div>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
 
-        {showForm ? (
-          <Card>
-            <CardContent className="pt-6">
-              <ProductForm 
-                product={editingProduct} 
-                onSuccess={handleFormSuccess} 
-              />
-              <div className="flex justify-end mt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowForm(false)}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="md:flex md:items-center md:justify-between mb-6">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
+            </div>
+            <div className="mt-4 flex md:mt-0 md:ml-4">
+              <Link href="/admin" legacyBehavior>
+                <a className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                  Back to Dashboard
+                </a>
+              </Link>
+              {!showForm && (
+                <button
+                  onClick={handleAddNewProduct}
+                  className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                 >
-                  Cancel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardContent className="pt-6">
-              {isLoading ? (
-                <div className="text-center py-10">Loading products...</div>
-              ) : products.length === 0 ? (
-                <div className="text-center py-10">
-                  <p className="mb-4">No products found</p>
-                  <Button onClick={handleAddNew}>Add Your First Product</Button>
-                </div>
-              ) : (
-                <Table>
-                  <TableCaption>List of all products</TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Image</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {products.map((product: any) => (
-                      <TableRow key={product.id}>
-                        <TableCell>{product.id}</TableCell>
-                        <TableCell>
-                          <div className="w-12 h-12 rounded overflow-hidden">
-                            <img 
-                              src={product.imageUrl} 
+                  Add New Product
+                </button>
+              )}
+            </div>
+          </div>
+
+          {showForm ? (
+            <div className="mb-8">
+              <button
+                onClick={() => setShowForm(false)}
+                className="mb-4 text-green-600 hover:text-green-800 flex items-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5 mr-1"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Products
+              </button>
+              <ProductForm product={selectedProduct} onSuccess={handleFormSuccess} />
+            </div>
+          ) : loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center p-8 bg-red-50 rounded-lg">
+              <p className="text-red-600">{error}</p>
+              <button
+                onClick={fetchProducts}
+                className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center p-8 bg-white rounded-lg shadow">
+              <p className="text-gray-600 mb-4">No products found in the system.</p>
+              <button
+                onClick={handleAddNewProduct}
+                className="bg-green-600 text-white px-4 py-2 rounded-md"
+              >
+                Add Your First Product
+              </button>
+            </div>
+          ) : (
+            <div className="bg-white shadow overflow-hidden sm:rounded-md">
+              <ul className="divide-y divide-gray-200">
+                {products.map((product) => (
+                  <li key={product.id}>
+                    <div className="px-4 py-4 sm:px-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-12 w-12 bg-gray-100 rounded-md overflow-hidden">
+                            <img
+                              src={product.imageUrl}
                               alt={product.name}
-                              className="w-full h-full object-cover"
+                              className="h-12 w-12 object-cover"
                             />
                           </div>
-                        </TableCell>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell>{product.category}</TableCell>
-                        <TableCell>{formatCurrency(product.price)}</TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleEdit(product)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="text-red-500 hover:text-red-600"
-                              onClick={() => handleDelete(product.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          <div className="ml-4">
+                            <p className="text-sm font-medium text-green-600 truncate">
+                              {product.name}
+                            </p>
+                            <p className="text-sm text-gray-500 truncate">{product.category}</p>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {formatCurrency(product.price)}/kg
+                          </span>
+                          <button
+                            onClick={() => handleEditProduct(product)}
+                            className="ml-2 text-sm font-medium text-indigo-600 hover:text-indigo-900"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(product.id)}
+                            className="ml-2 text-sm font-medium text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-500 line-clamp-2">{product.description}</p>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </main>
       </div>
     </>
   );
