@@ -63,59 +63,138 @@ export default async function handler(
   
   // POST: Create a new order
   if (req.method === 'POST') {
-    const { productId, quantity, deliveryName, deliveryPhone, deliveryAddress } = req.body;
+    const { productId, quantity, items, deliveryName, deliveryPhone, deliveryAddress } = req.body;
 
-    // Validate required fields
-    if (!productId || !quantity || !deliveryName || !deliveryPhone || !deliveryAddress) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    if (typeof quantity !== 'number' || quantity < 1) {
-      return res.status(400).json({ message: 'Quantity must be a positive number' });
+    // Validate delivery details
+    if (!deliveryName || !deliveryPhone || !deliveryAddress) {
+      return res.status(400).json({ message: 'Missing delivery details' });
     }
 
     try {
-      // Get the product to calculate price
-      const product = await prisma.product.findUnique({
-        where: { id: productId },
-      });
+      // Handle cart order (multiple items)
+      if (items && Array.isArray(items) && items.length > 0) {
+        // Validate items
+        for (const item of items) {
+          if (!item.productId || !item.quantity || item.quantity < 1) {
+            return res.status(400).json({ 
+              message: 'Invalid item data. Each item must have a productId and positive quantity.' 
+            });
+          }
+        }
 
-      if (!product) {
-        return res.status(404).json({ message: 'Product not found' });
-      }
+        // Fetch all products at once to calculate prices
+        const productIds = items.map(item => item.productId);
+        const products = await prisma.product.findMany({
+          where: {
+            id: {
+              in: productIds
+            }
+          }
+        });
 
-      // Calculate total amount
-      const totalAmount = product.price * quantity;
+        // Create a map for easy lookup
+        const productMap = new Map(
+          products.map(product => [product.id, product])
+        );
 
-      // Create the order with order item
-      const order = await prisma.order.create({
-        data: {
-          userId: parseInt(session.user.id),
-          totalAmount,
-          status: 'PENDING',
-          deliveryName,
-          deliveryPhone,
-          deliveryAddress,
-          orderItems: {
-            create: [
-              {
-                productId,
-                quantity,
-                price: product.price, // Store the price at time of order
-              },
-            ],
+        // Calculate total amount and prepare order items
+        let totalAmount = 0;
+        const orderItems = [];
+
+        for (const item of items) {
+          const product = productMap.get(item.productId);
+          if (!product) {
+            return res.status(404).json({ 
+              message: `Product with ID ${item.productId} not found.` 
+            });
+          }
+
+          const itemTotal = product.price * item.quantity;
+          totalAmount += itemTotal;
+
+          orderItems.push({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: product.price // Store the price at time of order
+          });
+        }
+
+        // Create the order with all items
+        const order = await prisma.order.create({
+          data: {
+            userId: parseInt(session.user.id.toString()),
+            totalAmount,
+            status: 'PENDING',
+            deliveryName,
+            deliveryPhone,
+            deliveryAddress,
+            orderItems: {
+              create: orderItems
+            }
           },
-        },
-        include: {
-          orderItems: {
-            include: {
-              product: true,
+          include: {
+            orderItems: {
+              include: {
+                product: true,
+              },
             },
           },
-        },
-      });
+        });
 
-      return res.status(201).json(order);
+        return res.status(201).json(order);
+      } 
+      // Handle single product order
+      else if (productId && quantity) {
+        if (typeof quantity !== 'number' || quantity < 1) {
+          return res.status(400).json({ message: 'Quantity must be a positive number' });
+        }
+
+        // Get the product to calculate price
+        const product = await prisma.product.findUnique({
+          where: { id: productId },
+        });
+
+        if (!product) {
+          return res.status(404).json({ message: 'Product not found' });
+        }
+
+        // Calculate total amount
+        const totalAmount = product.price * quantity;
+
+        // Create the order with order item
+        const order = await prisma.order.create({
+          data: {
+            userId: parseInt(session.user.id.toString()),
+            totalAmount,
+            status: 'PENDING',
+            deliveryName,
+            deliveryPhone,
+            deliveryAddress,
+            orderItems: {
+              create: [
+                {
+                  productId,
+                  quantity,
+                  price: product.price, // Store the price at time of order
+                },
+              ],
+            },
+          },
+          include: {
+            orderItems: {
+              include: {
+                product: true,
+              },
+            },
+          },
+        });
+
+        return res.status(201).json(order);
+      } else {
+        return res.status(400).json({ 
+          message: 'Missing required fields: Either provide productId and quantity, or an array of items'
+        });
+      }
     } catch (error) {
       console.error('Error creating order:', error);
       return res.status(500).json({ message: 'Error creating order' });

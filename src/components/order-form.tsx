@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import { formatCurrency } from '@/lib/utils';
+import { useCart } from '@/contexts/CartContext';
 
 interface OrderFormProps {
   productId?: number;
@@ -17,6 +18,7 @@ type FormData = {
 export function OrderForm({ productId }: OrderFormProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { items, clearCart, getTotal } = useCart();
   const [product, setProduct] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const [submitting, setSubmitting] = React.useState(false);
@@ -35,10 +37,13 @@ export function OrderForm({ productId }: OrderFormProps) {
     }
   }, [status, router]);
 
-  // Fetch product details when the component loads
+  // If we have a productId, fetch that specific product
+  // Otherwise, we'll use the cart items
   React.useEffect(() => {
     if (productId) {
       fetchProduct(productId);
+    } else {
+      setLoading(false);
     }
   }, [productId]);
 
@@ -77,29 +82,68 @@ export function OrderForm({ productId }: OrderFormProps) {
     setError('');
 
     try {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          productId: product.id,
-          quantity: data.quantity,
-          deliveryName: data.deliveryName,
-          deliveryPhone: data.deliveryPhone,
-          deliveryAddress: data.deliveryAddress,
-        }),
-      });
+      // If we have a single product
+      if (product) {
+        const response = await fetch('/api/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            productId: product.id,
+            quantity: data.quantity,
+            deliveryName: data.deliveryName,
+            deliveryPhone: data.deliveryPhone,
+            deliveryAddress: data.deliveryAddress,
+          }),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Something went wrong');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Something went wrong');
+        }
+
+        const orderData = await response.json();
+        
+        // Navigate to order confirmation page
+        router.push(`/orders/${orderData.id}`);
+      } 
+      // If we're processing a cart order
+      else if (items.length > 0) {
+        // Create an array of order items from the cart
+        const orderItems = items.map(item => ({
+          productId: item.id,
+          quantity: item.quantity
+        }));
+
+        const response = await fetch('/api/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            items: orderItems,
+            deliveryName: data.deliveryName,
+            deliveryPhone: data.deliveryPhone,
+            deliveryAddress: data.deliveryAddress,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Something went wrong');
+        }
+
+        const orderData = await response.json();
+        
+        // Clear the cart after successful order
+        clearCart();
+        
+        // Navigate to order confirmation page
+        router.push(`/orders/${orderData.id}`);
+      } else {
+        throw new Error('No items in cart');
       }
-
-      const orderData = await response.json();
-      
-      // Navigate to order confirmation page
-      router.push(`/orders/${orderData.id}`);
     } catch (err: any) {
       console.error('Error placing order:', err);
       setError(err.message || 'An error occurred. Please try again.');
@@ -112,7 +156,6 @@ export function OrderForm({ productId }: OrderFormProps) {
     
     // Basic validation
     if (
-      !formData.quantity ||
       !formData.deliveryName ||
       !formData.deliveryPhone ||
       !formData.deliveryAddress
@@ -121,8 +164,15 @@ export function OrderForm({ productId }: OrderFormProps) {
       return;
     }
     
-    if (formData.quantity < 1) {
+    // For single product order, validate quantity
+    if (product && formData.quantity < 1) {
       setError('Quantity must be at least 1');
+      return;
+    }
+    
+    // For cart order, check if cart has items
+    if (!product && items.length === 0) {
+      setError('Your cart is empty');
       return;
     }
     
@@ -139,7 +189,8 @@ export function OrderForm({ productId }: OrderFormProps) {
     );
   }
 
-  if (!product) {
+  // Handle the case when we should display a specific product
+  if (productId && !product) {
     return (
       <div className="alert alert-danger text-center p-4 animate-fade-in">
         <p>
@@ -156,40 +207,107 @@ export function OrderForm({ productId }: OrderFormProps) {
     );
   }
 
-  const totalPrice = product.price * formData.quantity;
+  // Handle the case when we should display cart items but cart is empty
+  if (!productId && items.length === 0) {
+    return (
+      <div className="alert alert-warning text-center p-4 animate-fade-in">
+        <p>Your cart is empty</p>
+        <button
+          onClick={() => router.push('/')}
+          className="btn btn-success mt-3 animate-pulse"
+        >
+          <i className="bi bi-arrow-left-circle me-2"></i>
+          Browse Products
+        </button>
+      </div>
+    );
+  }
+
+  // Calculate total price
+  const totalPrice = product 
+    ? product.price * formData.quantity 
+    : getTotal();
 
   return (
     <div className="card shadow animate-fade-in">
       <div className="card-body p-4">
-        <div className="row mb-4">
-          <div className="col-md-4 mb-3 mb-md-0">
-            <div className="position-relative overflow-hidden rounded h-100 animate-fade-in">
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                className="w-100 h-100 object-fit-cover"
-                style={{ objectFit: 'cover', height: '200px' }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-                }}
-              />
-              <div className="position-absolute top-0 end-0 p-2">
-                <span className="badge badge-category">
-                  {product.category}
-                </span>
+        {/* If we're showing a single product */}
+        {product ? (
+          <div className="row mb-4">
+            <div className="col-md-4 mb-3 mb-md-0">
+              <div className="position-relative overflow-hidden rounded h-100 animate-fade-in">
+                <img
+                  src={product.imageUrl}
+                  alt={product.name}
+                  className="w-100 h-100 object-fit-cover"
+                  style={{ objectFit: 'cover', height: '200px' }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+                  }}
+                />
+                <div className="position-absolute top-0 end-0 p-2">
+                  <span className="badge badge-category">
+                    {product.category}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="col-md-8 animate-slide-right">
+              <h2 className="card-title h4 fw-bold mb-2">{product.name}</h2>
+              <p className="text-muted mb-3">{product.description}</p>
+              <div className="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                <span className="text-muted">Price per kg:</span>
+                <span className="fs-5 fw-bold text-success">{formatCurrency(product.price)}</span>
               </div>
             </div>
           </div>
-          
-          <div className="col-md-8 animate-slide-right">
-            <h2 className="card-title h4 fw-bold mb-2">{product.name}</h2>
-            <p className="text-muted mb-3">{product.description}</p>
-            <div className="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
-              <span className="text-muted">Price per kg:</span>
-              <span className="fs-5 fw-bold text-success">{formatCurrency(product.price)}</span>
+        ) : (
+          /* If we're showing cart items */
+          <div className="mb-4 animate-fade-in">
+            <h2 className="h4 fw-bold mb-4">Your Cart Items</h2>
+            <div className="table-responsive">
+              <table className="table table-hover">
+                <thead className="table-light">
+                  <tr>
+                    <th>Product</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th className="text-end">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => (
+                    <tr key={item.id} className="animate-fade-in">
+                      <td>
+                        <div className="d-flex align-items-center">
+                          <div style={{ width: '40px', height: '40px' }} className="me-2">
+                            <img
+                              src={item.imageUrl}
+                              alt={item.name}
+                              className="img-fluid rounded"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <p className="mb-0 fw-medium">{item.name}</p>
+                            <small className="text-muted">{item.category}</small>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{formatCurrency(item.price)}</td>
+                      <td>{item.quantity}</td>
+                      <td className="text-end fw-bold">{formatCurrency(item.price * item.quantity)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
+        )}
         
         {error && (
           <div className="alert alert-danger alert-dismissible fade show animate-fade-in" role="alert">
@@ -199,31 +317,34 @@ export function OrderForm({ productId }: OrderFormProps) {
         )}
         
         <form onSubmit={handleSubmit} className="animate-fade-in delay-200">
-          <div className="mb-4">
-            <div className="mb-3">
-              <label htmlFor="quantity" className="form-label fw-semibold">
-                Quantity (kg) <span className="text-danger">*</span>
-              </label>
-              <div className="input-group">
-                <span className="input-group-text bg-light">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-box-seam" viewBox="0 0 16 16">
-                    <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2l-2.218-.887zm3.564 1.426L5.596 5 8 5.961 14.154 3.5l-2.404-.961zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/>
-                  </svg>
-                </span>
-                <input
-                  id="quantity"
-                  name="quantity"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={formData.quantity}
-                  onChange={handleChange}
-                  className="form-control"
-                  required
-                />
+          {/* Show quantity input only for single product orders */}
+          {product && (
+            <div className="mb-4">
+              <div className="mb-3">
+                <label htmlFor="quantity" className="form-label fw-semibold">
+                  Quantity (kg) <span className="text-danger">*</span>
+                </label>
+                <div className="input-group">
+                  <span className="input-group-text bg-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-box-seam" viewBox="0 0 16 16">
+                      <path d="M8.186 1.113a.5.5 0 0 0-.372 0L1.846 3.5l2.404.961L10.404 2l-2.218-.887zm3.564 1.426L5.596 5 8 5.961 14.154 3.5l-2.404-.961zm3.25 1.7-6.5 2.6v7.922l6.5-2.6V4.24zM7.5 14.762V6.838L1 4.239v7.923l6.5 2.6zM7.443.184a1.5 1.5 0 0 1 1.114 0l7.129 2.852A.5.5 0 0 1 16 3.5v8.662a1 1 0 0 1-.629.928l-7.185 2.874a.5.5 0 0 1-.372 0L.63 13.09a1 1 0 0 1-.63-.928V3.5a.5.5 0 0 1 .314-.464L7.443.184z"/>
+                    </svg>
+                  </span>
+                  <input
+                    id="quantity"
+                    name="quantity"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    className="form-control"
+                    required
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
           
           <div className="mb-4 p-3 border rounded bg-light animate-fade-in delay-300">
             <h3 className="h5 fw-bold mb-3">

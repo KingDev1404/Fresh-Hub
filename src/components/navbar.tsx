@@ -2,6 +2,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { signOut, useSession } from 'next-auth/react';
+import { CartDropdown } from '@/components/cart/CartDropdown';
 
 export function Navbar() {
   const router = useRouter();
@@ -97,7 +98,9 @@ export function Navbar() {
             )}
           </ul>
           
-          <div className="d-flex align-items-center">
+          <div className="d-flex align-items-center gap-3">
+            <CartDropdown />
+            
             {status === 'loading' ? (
               <div className="spinner-border spinner-border-sm text-success" role="status">
                 <span className="visually-hidden">Loading...</span>

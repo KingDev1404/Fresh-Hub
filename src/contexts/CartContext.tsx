@@ -22,46 +22,46 @@ interface CartContextType {
 export const CartContext = React.createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = React.useState<CartItem[]>([]);
-
-  // Load cart from localStorage on initial render
-  React.useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      try {
-        setItems(JSON.parse(savedCart));
-      } catch (error) {
-        console.error('Failed to parse cart from localStorage', error);
-      }
+  // Try to load cart from localStorage on initial render
+  const [items, setItems] = React.useState<CartItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      const savedCart = localStorage.getItem('cart');
+      return savedCart ? JSON.parse(savedCart) : [];
     }
-  }, []);
+    return [];
+  });
 
   // Save cart to localStorage whenever it changes
   React.useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(items));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cart', JSON.stringify(items));
+    }
   }, [items]);
 
-  const addItem = (product: any, quantity = 1) => {
+  const addItem = (product: any, quantity: number = 1) => {
     setItems((prevItems) => {
-      // Check if the item already exists in the cart
-      const existingItem = prevItems.find((item) => item.id === product.id);
-      
-      if (existingItem) {
-        // Update quantity of existing item
-        return prevItems.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
+      // Check if item already exists in cart
+      const existingItemIndex = prevItems.findIndex(
+        (item) => item.id === product.id
+      );
+
+      if (existingItemIndex >= 0) {
+        // Update quantity if item exists
+        const updatedItems = [...prevItems];
+        updatedItems[existingItemIndex] = {
+          ...updatedItems[existingItemIndex],
+          quantity: updatedItems[existingItemIndex].quantity + quantity,
+        };
+        return updatedItems;
       } else {
-        // Add new item to cart
+        // Add new item if it doesn't exist
         return [
           ...prevItems,
           {
             id: product.id,
             name: product.name,
             price: product.price,
-            quantity: quantity,
+            quantity,
             imageUrl: product.imageUrl,
             category: product.category,
           },
@@ -71,14 +71,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeItem = (productId: number) => {
-    setItems((prevItems) => prevItems.filter((item) => item.id !== productId));
+    setItems((prevItems) =>
+      prevItems.filter((item) => item.id !== productId)
+    );
   };
 
   const updateQuantity = (productId: number, quantity: number) => {
-    if (quantity <= 0) {
-      removeItem(productId);
-      return;
-    }
+    if (quantity < 1) return;
 
     setItems((prevItems) =>
       prevItems.map((item) =>
