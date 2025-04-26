@@ -24,7 +24,8 @@ export function Navbar() {
     router.push('/');
   };
 
-  const isAdmin = session?.user?.role === 'ADMIN';
+  // Safely check if user has admin role
+  const isAdmin = session?.user && (session.user as any).role === 'ADMIN';
 
   return (
     <header className="bg-white shadow">
