@@ -1,32 +1,51 @@
-modules = ["nodejs-20"]
+FreshHarvest is a modern web application for managing and selling fresh fruits and vegetables online.
+It features user authentication, product management, role-based access control, and a clean, responsive UI.
 
-[nix]
-channel = "stable-24_05"
+✨ Features
+🛒 Product Browsing — View fresh products with categories, prices, and descriptions.
 
-[workflows]
-runButton = "Project"
+🔒 Authentication — Secure login system using NextAuth.js and JWT.
 
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
+👨‍💼 Admin Access — Only Admins can create, edit, or delete products.
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Next.js App"
+🖥️ Responsive Design — Fully optimized for desktop and mobile.
 
-[[workflows.workflow]]
-name = "Next.js App"
-author = "agent"
+💬 Error Handling — Friendly error messages and loading states.
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node dev.js"
-waitForPort = 5000
+⚡ Fast Performance — Built with Next.js and optimized queries.
 
-[deployment]
-run = ["sh", "-c", "npm run dev"]
+📚 Tech Stack
+Frontend: Next.js, React, TypeScript
 
-[[ports]]
-localPort = 5000
-externalPort = 80
+Backend: Next.js API Routes, Prisma ORM
+
+Database: PostgreSQL
+
+Authentication: NextAuth.js (JWT Strategy)
+
+Password Security: bcryptjs
+
+ORM: Prisma
+
+Deployment: (e.g., Vercel, Railway, Render) (add where you plan to deploy)
+
+git clone https://github.com/SohamDev1404/FreshHarvest.git
+cd FreshHarvest
+
+npm install
+# or
+yarn install
+
+DATABASE_URL="postgresql://<username>:<password>@localhost:5432/freshharvest"
+NEXTAUTH_SECRET="your-random-secret"
+NEXTAUTH_URL="http://localhost:3000"
+
+npx prisma migrate dev --name init
+
+
+npm run dev
+# or
+yarn dev
+
+
+Open http://localhost:3000 in your browser to see the app.
