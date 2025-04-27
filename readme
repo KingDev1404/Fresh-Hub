@@ -41,6 +41,14 @@ NEXTAUTH_SECRET="your-random-secret"
 NEXTAUTH_URL="http://localhost:3000"
 
 npx prisma migrate dev --name init
+psql -U postgres
+# enter password
+CREATE DATABASE freshharvest;
+\q
+npx prisma db push
+npx prisma db seed
+npm run dev
+
 
 
 npm run dev
