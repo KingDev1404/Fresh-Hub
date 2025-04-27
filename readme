@@ -36,7 +36,7 @@ npm install
 # or
 yarn install
 
-DATABASE_URL="postgresql://<username>:<password>@localhost:5432/freshharvest"
+DATABASE_URL="postgresql://neondb_owner:npg_WRmaNE03AyQZ@ep-weathered-pine-a4kz4lmj-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require"
 NEXTAUTH_SECRET="your-random-secret"
 NEXTAUTH_URL="http://localhost:3000"
 
